@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
-import xml.etree.ElementTree as ET
 
 
 def parse_args() -> argparse.Namespace:
