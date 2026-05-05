@@ -91,9 +91,14 @@ def main() -> None:
 
     image_id = 1
     ann_id = 1
+    malformed_xml_paths = []
 
     for xml_path in sorted(iter_pagexml_files(args.input_root, args.page_folder_name, args.exclude_prefix)):
-        tree = ET.parse(xml_path)
+        try:
+            tree = ET.parse(xml_path)
+        except ET.ParseError:
+            malformed_xml_paths.append(str(xml_path))
+            continue
         root = tree.getroot()
 
         page_elem = next((e for e in root.iter() if local_name(e.tag) == "Page"), None)
@@ -179,6 +184,10 @@ def main() -> None:
     kept_images = sum(1 for img in images if per_image_ann_count[img["id"]] > 0)
     print(f"Converted {len(images)} PAGE-XML files")
     print(f"Created {len(annotations)} annotations across {kept_images} labeled images")
+    if malformed_xml_paths:
+        print(f"Skipped {len(malformed_xml_paths)} malformed PAGE-XML files:")
+        for bad_path in malformed_xml_paths:
+            print(f"  - {bad_path}")
     print(f"Saved COCO JSON to: {args.output_json}")
 
 
