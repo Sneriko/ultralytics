@@ -97,7 +97,7 @@ Transkribus</Creator>
                 <Coords points="2409,1727 3470,1610 3753,1605 3833,1664 3887,1616 4168,1619 4172,1546 4075,1560 3948,1494 3640,1582 3421,1521 3264,1607 3090,1539 2911,1612 2807,1571 2744,1623 2574,1564 2411,1650"/>
                 <Baseline points="2424,1672 2511,1666 2598,1661 2686,1655 2773,1650 2861,1644 2948,1639 3035,1634 3123,1629 3210,1624 3298,1619 3385,1614 3472,1609 3560,1606 3647,1602 3735,1599 3822,1597 3909,1596 3997,1594 4084,1594 4172,1596"/>
                 <TextEquiv>
-                    <Unicode>Lyst, och förmantes alla i Gemehn som hwar och</Unicode>
+                    <Unicode>Lyst, och förmantes alla i Gemehn some hwar och</Unicode>
                 </TextEquiv>
             </TextLine>
             <TextLine id="r2l11" custom="readingOrder {index:10;} abbrev {offset:42; length:10;}">
@@ -125,7 +125,7 @@ Transkribus</Creator>
                 <Coords points="2427,2105 2513,2153 2673,2080 2764,2121 2868,2076 2936,2110 2995,2058 3153,2044 3384,2157 3860,2022 3950,2065 4018,2033 4088,2089 4206,2074 4213,1949 4086,1906 3939,1954 3676,1924 3559,2001 3443,1926 3357,1976 3151,1940 3018,2001 2970,1960 2431,2031"/>
                 <Baseline points="2440,2098 2528,2090 2617,2081 2705,2074 2794,2066 2883,2060 2971,2053 3060,2046 3148,2041 3237,2034 3326,2030 3414,2025 3503,2020 3591,2017 3680,2014 3769,2012 3857,2010 3946,2008 4034,2008 4123,2008 4212,2008"/>
                 <TextEquiv>
-                    <Unicode>hafwa att undfå den Rättwijßa som deras Saak kan</Unicode>
+                    <Unicode>hafwa att undfå den Rättwijßa some deras Saak kan</Unicode>
                 </TextEquiv>
             </TextLine>
             <TextLine id="r2l15" custom="readingOrder {index:14;}">
@@ -181,7 +181,7 @@ Transkribus</Creator>
                 <Coords points="2413,3140 2653,3088 2757,3124 2827,3063 3054,3042 3402,3085 3513,3024 3638,3061 3817,2993 4104,3022 4181,3004 4192,2855 3914,2809 3719,2927 3486,2816 3303,2943 3113,2886 2999,2952 2911,2913 2664,3002 2556,2943 2422,3011"/>
                 <Baseline points="2428,3086 2516,3078 2604,3072 2692,3066 2780,3060 2868,3053 2956,3046 3044,3040 3132,3034 3220,3028 3308,3021 3396,3016 3484,3010 3572,3006 3660,3000 3748,2995 3836,2990 3924,2986 4012,2982 4100,2977 4188,2974"/>
                 <TextEquiv>
-                    <Unicode>Nu som ofta tillförande förböd Bärgmestaren att</Unicode>
+                    <Unicode>Nu some ofta tillförande förböd Bärgmestaren att</Unicode>
                 </TextEquiv>
             </TextLine>
             <TextLine id="r2l24" custom="readingOrder {index:22;}">
@@ -195,7 +195,7 @@ Transkribus</Creator>
                 <Coords points="2415,3357 2642,3341 2764,3273 2970,3341 3242,3233 3638,3208 3796,3248 4161,3199 4165,3115 4029,3090 3685,3110 3518,3181 3248,3142 3117,3203 2993,3160 2821,3246 2714,3192 2424,3226"/>
                 <Baseline points="2432,3294 2518,3287 2605,3278 2692,3272 2778,3265 2865,3258 2952,3252 3038,3245 3125,3238 3212,3232 3299,3227 3385,3222 3472,3217 3559,3212 3645,3208 3732,3204 3819,3200 3905,3197 3992,3194 4079,3192 4166,3190"/>
                 <TextEquiv>
-                    <Unicode>Smed för den Elacha Conceqvence som sådant uthij</Unicode>
+                    <Unicode>Smed för den Elacha Conceqvence some sådant uthij</Unicode>
                 </TextEquiv>
             </TextLine>
             <TextLine id="r2l26" custom="readingOrder {index:24;}">
