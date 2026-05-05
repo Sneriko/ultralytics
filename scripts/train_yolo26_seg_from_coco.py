@@ -43,7 +43,12 @@ def parse_args() -> argparse.Namespace:
         help="Val JSON filename located in annotations-dir",
     )
     p.add_argument("--test-json", type=str, default="", help="Optional test JSON filename in annotations-dir")
-    p.add_argument("--yaml-out", type=Path, default=None, help="Output dataset yaml path (default: <dataset-root>/dataset_seg.yaml)")
+    p.add_argument(
+        "--yaml-out",
+        type=Path,
+        default=None,
+        help="Output dataset yaml path (default: <dataset-root>/dataset_seg.yaml)",
+    )
     p.add_argument(
         "--convert-save-dir",
         type=Path,
