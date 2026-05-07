@@ -1,42 +1,34 @@
 #!/usr/bin/env python3
-"""Convert PAGE-XML files to a COCO instance-segmentation dataset.
-
-The converter recursively scans a root directory for PAGE-XML files located in
-folders named "page" (case-insensitive), builds COCO image/annotation records
-from region polygons, and writes a single COCO JSON file.
-"""
+"""Convert PAGE-XML files to a YOLO segmentation dataset with train/val splits."""
 
 from __future__ import annotations
 
 import argparse
-import json
+import random
+import shutil
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
-import xml.etree.ElementTree as ET
+
+import yaml
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input_root", type=Path, help="Root directory to scan")
-    parser.add_argument("output_json", type=Path, help="Output COCO annotations JSON path")
+    parser.add_argument("output_root", type=Path, help="Output dataset root path")
     parser.add_argument(
-        "--exclude-prefix",
-        type=str,
-        default="",
-        help="Exclude folders whose basename starts with this prefix",
+        "--exclude-prefix", type=str, default="", help="Exclude folders whose basename starts with this prefix"
     )
     parser.add_argument(
-        "--page-folder-name",
-        type=str,
-        default="page",
-        help="Only parse XML files under folders with this name (default: page)",
+        "--page-folder-name", type=str, default="page", help="Only parse XML files under folders with this name"
     )
     parser.add_argument(
-        "--min-points",
-        type=int,
-        default=3,
-        help="Minimum polygon points required to keep an annotation",
+        "--min-points", type=int, default=3, help="Minimum polygon points required to keep an annotation"
     )
+    parser.add_argument("--val-ratio", type=float, default=0.2, help="Validation split ratio")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for split")
+    parser.add_argument("--copy-images", action="store_true", help="Copy images into output_root/images/{train,val}")
     return parser.parse_args()
 
 
@@ -62,19 +54,13 @@ def parse_points(points_raw: str):
     return pts
 
 
-def polygon_area_and_bbox(points):
-    xs = [p[0] for p in points]
-    ys = [p[1] for p in points]
-    xmin, xmax = min(xs), max(xs)
-    ymin, ymax = min(ys), max(ys)
-
+def polygon_area(points):
     area2 = 0.0
     for i in range(len(points)):
         x1, y1 = points[i]
         x2, y2 = points[(i + 1) % len(points)]
         area2 += x1 * y2 - x2 * y1
-    area = abs(area2) * 0.5
-    return area, [xmin, ymin, xmax - xmin, ymax - ymin]
+    return abs(area2) * 0.5
 
 
 def local_name(tag: str) -> str:
@@ -83,14 +69,10 @@ def local_name(tag: str) -> str:
 
 def main() -> None:
     args = parse_args()
+    rng = random.Random(args.seed)
 
-    categories = {}
-    images = []
-    annotations = []
-    per_image_ann_count = defaultdict(int)
-
-    image_id = 1
-    ann_id = 1
+    categories: dict[str, int] = {}
+    records = []
     malformed_xml_paths = []
 
     for xml_path in sorted(iter_pagexml_files(args.input_root, args.page_folder_name, args.exclude_prefix)):
@@ -100,7 +82,6 @@ def main() -> None:
             malformed_xml_paths.append(str(xml_path))
             continue
         root = tree.getroot()
-
         page_elem = next((e for e in root.iter() if local_name(e.tag) == "Page"), None)
         if page_elem is None:
             continue
@@ -108,87 +89,86 @@ def main() -> None:
         width = int(page_elem.attrib.get("imageWidth", 0))
         height = int(page_elem.attrib.get("imageHeight", 0))
         file_name = page_elem.attrib.get("imageFilename", xml_path.with_suffix(".jpg").name)
+        image_path = xml_path.parent / file_name
 
-        rel_dir = xml_path.parent.relative_to(args.input_root)
-        image_rel_path = str((rel_dir / file_name).as_posix())
-
-        current_image_id = image_id
-        image_id += 1
-
-        images.append(
-            {
-                "id": current_image_id,
-                "file_name": image_rel_path,
-                "width": width,
-                "height": height,
-            }
-        )
-
+        lines = []
         for elem in root.iter():
             tag_name = local_name(elem.tag)
             if not (tag_name.endswith("Region") or tag_name == "TextLine"):
                 continue
-
             coords = next((c for c in elem if local_name(c.tag) == "Coords"), None)
             if coords is None:
                 continue
-
             points_raw = coords.attrib.get("points", "").strip()
             if not points_raw:
                 continue
-
             points = parse_points(points_raw)
             if len(points) < args.min_points:
                 continue
-
-            category_name = tag_name
-            if category_name not in categories:
-                categories[category_name] = len(categories) + 1
-
-            area, bbox = polygon_area_and_bbox(points)
-            if area <= 0:
+            if polygon_area(points) <= 0:
                 continue
 
-            segmentation = [coord for point in points for coord in point]
+            if tag_name not in categories:
+                categories[tag_name] = len(categories)
+            cls = categories[tag_name]
 
-            annotations.append(
-                {
-                    "id": ann_id,
-                    "image_id": current_image_id,
-                    "category_id": categories[category_name],
-                    "segmentation": [segmentation],
-                    "area": area,
-                    "bbox": bbox,
-                    "iscrowd": 0,
-                }
-            )
-            ann_id += 1
-            per_image_ann_count[current_image_id] += 1
+            norm = []
+            for x, y in points:
+                norm.extend([x / max(width, 1), y / max(height, 1)])
+            lines.append(f"{cls} " + " ".join(f"{v:.6f}" for v in norm))
 
-    categories_list = [
-        {"id": cid, "name": cname, "supercategory": "page_region"}
-        for cname, cid in sorted(categories.items(), key=lambda x: x[1])
-    ]
+        if lines:
+            records.append({"xml": xml_path, "image": image_path, "label_lines": lines})
 
-    coco = {
-        "info": {"description": "PAGE-XML converted COCO dataset"},
-        "licenses": [],
-        "images": images,
-        "annotations": annotations,
-        "categories": categories_list,
-    }
+    rng.shuffle(records)
+    n_val = int(len(records) * args.val_ratio)
+    val_set = set(id(r) for r in records[:n_val])
 
-    args.output_json.parent.mkdir(parents=True, exist_ok=True)
-    args.output_json.write_text(json.dumps(coco, indent=2), encoding="utf-8")
+    out = args.output_root
+    for split in ("train", "val"):
+        (out / "images" / split).mkdir(parents=True, exist_ok=True)
+        (out / "labels" / split).mkdir(parents=True, exist_ok=True)
 
-    kept_images = sum(1 for img in images if per_image_ann_count[img["id"]] > 0)
-    print(f"Converted {len(images)} PAGE-XML files")
-    print(f"Created {len(annotations)} annotations across {kept_images} labeled images")
+    split_counts = defaultdict(int)
+    for r in records:
+        split = "val" if id(r) in val_set else "train"
+        stem = r["image"].stem
+        label_out = out / "labels" / split / f"{stem}.txt"
+        label_out.write_text("\n".join(r["label_lines"]) + "\n", encoding="utf-8")
+
+        image_out = out / "images" / split / r["image"].name
+        if args.copy_images:
+            if r["image"].exists():
+                shutil.copy2(r["image"], image_out)
+        else:
+            if image_out.exists() or image_out.is_symlink():
+                image_out.unlink()
+            if r["image"].exists():
+                image_out.symlink_to(r["image"].resolve())
+
+        split_counts[split] += 1
+
+    names = {idx: name for name, idx in sorted(categories.items(), key=lambda x: x[1])}
+    yaml_out = out / "dataset_seg.yaml"
+    yaml_out.write_text(
+        yaml.safe_dump(
+            {
+                "path": str(out.resolve()),
+                "train": "images/train",
+                "val": "images/val",
+                "names": names,
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+    print(f"Created YOLO dataset at: {out}")
+    print(f"Train images: {split_counts['train']}, Val images: {split_counts['val']}")
+    print(f"Classes: {len(names)}")
     if malformed_xml_paths:
-        print(f"Skipped {len(malformed_xml_paths)} malformed PAGE-XML files:")
-        for bad_path in malformed_xml_paths:
-            print(f"  - {bad_path}")
-    print(f"Saved COCO JSON to: {args.output_json}")
+        print(f"Skipped {len(malformed_xml_paths)} malformed PAGE-XML files")
 
 
 if __name__ == "__main__":

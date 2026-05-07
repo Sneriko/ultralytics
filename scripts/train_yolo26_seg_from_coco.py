@@ -1,61 +1,18 @@
 #!/usr/bin/env python3
-"""Convert COCO JSON annotations to YOLO-seg format and train a YOLO26-seg model.
-
-This helper script:
-1) Converts COCO JSON files from annotations/ into YOLO TXT segmentation labels.
-2) Ensures labels are copied to dataset_root/labels/{train,val,test}.
-3) Builds a dataset YAML from COCO categories.
-4) Launches Ultralytics YOLO segment training with explicit (default) tunable parameters.
-"""
+"""Train a YOLO26 segmentation model directly from an existing YOLO dataset YAML."""
 
 from __future__ import annotations
 
 import argparse
-import json
-import shutil
+import os
 from pathlib import Path
 
-import yaml
-
 from ultralytics import YOLO, settings
-from ultralytics.data.converter import convert_coco
 
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--dataset-root", type=Path, required=True, help="Dataset root for generated labels/yaml and optional default paths")
-    p.add_argument(
-        "--annotations-dir",
-        type=Path,
-        default=None,
-        help="Directory containing COCO JSON files (default: <dataset-root>/annotations)",
-    )
-    p.add_argument(
-        "--images-dir",
-        type=Path,
-        default=None,
-        help="Directory containing train/ val/ test image folders (default: <dataset-root>/images)",
-    )
-    p.add_argument(
-        "--train-json",
-        type=str,
-        default="instances_train.json",
-        help="Train JSON filename located in annotations-dir",
-    )
-    p.add_argument(
-        "--val-json",
-        type=str,
-        default="instances_val.json",
-        help="Val JSON filename located in annotations-dir",
-    )
-    p.add_argument("--test-json", type=str, default="", help="Optional test JSON filename in annotations-dir")
-    p.add_argument("--yaml-out", type=Path, default=None, help="Output dataset yaml path (default: <dataset-root>/dataset_seg.yaml)")
-    p.add_argument(
-        "--convert-save-dir",
-        type=Path,
-        default=None,
-        help="Where convert_coco writes intermediate output (default: <dataset-root>/converted)",
-    )
+    p.add_argument("--data", type=Path, required=True, help="Path to YOLO dataset YAML (e.g., dataset_seg.yaml)")
 
     # Model and train params (set to Ultralytics defaults)
     p.add_argument("--model", type=str, default="yolo26n-seg.pt", help="Model checkpoint or model YAML")
@@ -97,78 +54,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--mlflow-username", type=str, default="", help="MLflow basic-auth username")
     p.add_argument("--mlflow-password", type=str, default="", help="MLflow basic-auth password")
     p.add_argument("--mlflow-token", type=str, default="", help="MLflow bearer token")
-    p.add_argument(
-        "--mlflow-keep-run-active",
-        action="store_true",
-        help="Keep MLflow run open after training (otherwise run is ended automatically)",
-    )
+    p.add_argument("--mlflow-keep-run-active", action="store_true", help="Keep MLflow run open after training")
     return p.parse_args()
-
-
-def load_categories(coco_json: Path) -> dict[int, str]:
-    data = json.loads(coco_json.read_text(encoding="utf-8"))
-    categories = sorted(data["categories"], key=lambda x: x["id"])
-    return {i: c["name"] for i, c in enumerate(categories)}
-
-
-def ensure_split_labels(converted_labels_dir: Path, dataset_root: Path, split: str) -> None:
-    src = converted_labels_dir / split
-    dst = dataset_root / "labels" / split
-    if not src.exists():
-        return
-    dst.mkdir(parents=True, exist_ok=True)
-    for label_file in src.glob("*.txt"):
-        shutil.copy2(label_file, dst / label_file.name)
-
-
-def write_dataset_yaml(yaml_path: Path, images_dir: Path, names: dict[int, str], has_test: bool) -> None:
-    images_dir = images_dir.resolve()
-    payload = {
-        "train": str(images_dir / "train"),
-        "val": str(images_dir / "val"),
-        "names": names,
-    }
-    if has_test:
-        payload["test"] = str(images_dir / "test")
-    yaml_path.parent.mkdir(parents=True, exist_ok=True)
-    yaml_path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
 
 def main() -> None:
     args = parse_args()
 
-    dataset_root = args.dataset_root.resolve()
-    annotations_dir = (args.annotations_dir or (dataset_root / "annotations")).resolve()
-    images_dir = (args.images_dir or (dataset_root / "images")).resolve()
-    yaml_out = args.yaml_out or (dataset_root / "dataset_seg.yaml")
-    convert_save_dir = (args.convert_save_dir or (dataset_root / "converted")).resolve()
-
-    train_json_path = annotations_dir / args.train_json
-    val_json_path = annotations_dir / args.val_json
-    test_json_path = annotations_dir / args.test_json if args.test_json else None
-
-    if not train_json_path.exists() or not val_json_path.exists():
-        raise FileNotFoundError(f"Expected train/val JSON at {train_json_path} and {val_json_path}")
-
-    convert_coco(
-        labels_dir=str(annotations_dir),
-        save_dir=str(convert_save_dir),
-        use_segments=True,
-        cls91to80=False,
-    )
-
-    converted_labels = convert_save_dir / "labels"
-    ensure_split_labels(converted_labels, dataset_root, "train")
-    ensure_split_labels(converted_labels, dataset_root, "val")
-    if test_json_path and test_json_path.exists():
-        ensure_split_labels(converted_labels, dataset_root, "test")
-
-    names = load_categories(train_json_path)
-    write_dataset_yaml(yaml_out, images_dir, names, has_test=bool(test_json_path and test_json_path.exists()))
+    data_yaml = args.data.resolve()
+    if not data_yaml.exists():
+        raise FileNotFoundError(f"Dataset YAML not found: {data_yaml}")
 
     if args.mlflow:
-        import os
-
         settings.update({"mlflow": True})
         if args.mlflow_tracking_uri:
             os.environ["MLFLOW_TRACKING_URI"] = args.mlflow_tracking_uri
@@ -187,7 +84,7 @@ def main() -> None:
 
     model = YOLO(args.model)
     model.train(
-        data=str(yaml_out),
+        data=str(data_yaml),
         epochs=args.epochs,
         imgsz=args.imgsz,
         batch=args.batch,
