@@ -23,12 +23,18 @@ from ultralytics.data.converter import convert_coco
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--dataset-root", type=Path, required=True, help="Dataset root containing images/ and annotations/")
+    p.add_argument("--dataset-root", type=Path, required=True, help="Dataset root for generated labels/yaml and optional default paths")
     p.add_argument(
         "--annotations-dir",
         type=Path,
         default=None,
         help="Directory containing COCO JSON files (default: <dataset-root>/annotations)",
+    )
+    p.add_argument(
+        "--images-dir",
+        type=Path,
+        default=None,
+        help="Directory containing train/ val/ test image folders (default: <dataset-root>/images)",
     )
     p.add_argument(
         "--train-json",
@@ -115,15 +121,15 @@ def ensure_split_labels(converted_labels_dir: Path, dataset_root: Path, split: s
         shutil.copy2(label_file, dst / label_file.name)
 
 
-def write_dataset_yaml(yaml_path: Path, dataset_root: Path, names: dict[int, str], has_test: bool) -> None:
+def write_dataset_yaml(yaml_path: Path, images_dir: Path, names: dict[int, str], has_test: bool) -> None:
+    images_dir = images_dir.resolve()
     payload = {
-        "path": str(dataset_root.resolve()),
-        "train": "images/train",
-        "val": "images/val",
+        "train": str(images_dir / "train"),
+        "val": str(images_dir / "val"),
         "names": names,
     }
     if has_test:
-        payload["test"] = "images/test"
+        payload["test"] = str(images_dir / "test")
     yaml_path.parent.mkdir(parents=True, exist_ok=True)
     yaml_path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
@@ -133,6 +139,7 @@ def main() -> None:
 
     dataset_root = args.dataset_root.resolve()
     annotations_dir = (args.annotations_dir or (dataset_root / "annotations")).resolve()
+    images_dir = (args.images_dir or (dataset_root / "images")).resolve()
     yaml_out = args.yaml_out or (dataset_root / "dataset_seg.yaml")
     convert_save_dir = (args.convert_save_dir or (dataset_root / "converted")).resolve()
 
@@ -157,7 +164,7 @@ def main() -> None:
         ensure_split_labels(converted_labels, dataset_root, "test")
 
     names = load_categories(train_json_path)
-    write_dataset_yaml(yaml_out, dataset_root, names, has_test=bool(test_json_path and test_json_path.exists()))
+    write_dataset_yaml(yaml_out, images_dir, names, has_test=bool(test_json_path and test_json_path.exists()))
 
     if args.mlflow:
         import os
