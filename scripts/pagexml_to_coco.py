@@ -18,7 +18,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("input_root", type=Path, help="Root directory to scan")
     parser.add_argument("output_root", type=Path, help="Output dataset root path")
     parser.add_argument(
-        "--exclude-prefix", type=str, default="", help="Exclude folders whose basename starts with this prefix"
+        "--exclude-prefix",
+        action="append",
+        default=[],
+        help="Exclude folders whose basename starts with this prefix (repeatable)",
     )
     parser.add_argument(
         "--page-folder-name", type=str, default="page", help="Only parse XML files under folders with this name"
@@ -32,14 +35,14 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def should_exclude(path: Path, prefix: str) -> bool:
-    return bool(prefix) and any(part.startswith(prefix) for part in path.parts)
+def should_exclude(path: Path, prefixes: list[str]) -> bool:
+    return any(part.startswith(prefix) for prefix in prefixes if prefix for part in path.parts)
 
 
-def iter_pagexml_files(root: Path, page_folder_name: str, exclude_prefix: str):
+def iter_pagexml_files(root: Path, page_folder_name: str, exclude_prefixes: list[str]):
     target = page_folder_name.lower()
     for xml_file in root.rglob("*.xml"):
-        if should_exclude(xml_file, exclude_prefix):
+        if should_exclude(xml_file, exclude_prefixes):
             continue
         if target not in {p.lower() for p in xml_file.parts}:
             continue
