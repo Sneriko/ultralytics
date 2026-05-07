@@ -6,9 +6,9 @@ from __future__ import annotations
 import argparse
 import random
 import shutil
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
-import xml.etree.ElementTree as ET
 
 import yaml
 
@@ -17,9 +17,15 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input_root", type=Path, help="Root directory to scan")
     parser.add_argument("output_root", type=Path, help="Output dataset root path")
-    parser.add_argument("--exclude-prefix", type=str, default="", help="Exclude folders whose basename starts with this prefix")
-    parser.add_argument("--page-folder-name", type=str, default="page", help="Only parse XML files under folders with this name")
-    parser.add_argument("--min-points", type=int, default=3, help="Minimum polygon points required to keep an annotation")
+    parser.add_argument(
+        "--exclude-prefix", type=str, default="", help="Exclude folders whose basename starts with this prefix"
+    )
+    parser.add_argument(
+        "--page-folder-name", type=str, default="page", help="Only parse XML files under folders with this name"
+    )
+    parser.add_argument(
+        "--min-points", type=int, default=3, help="Minimum polygon points required to keep an annotation"
+    )
     parser.add_argument("--val-ratio", type=float, default=0.2, help="Validation split ratio")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for split")
     parser.add_argument("--copy-images", action="store_true", help="Copy images into output_root/images/{train,val}")
