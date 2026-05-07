@@ -23,7 +23,12 @@ from ultralytics.data.converter import convert_coco
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--dataset-root", type=Path, required=True, help="Dataset root for generated labels/yaml and optional default paths")
+    p.add_argument(
+        "--dataset-root",
+        type=Path,
+        required=True,
+        help="Dataset root for generated labels/yaml and optional default paths",
+    )
     p.add_argument(
         "--annotations-dir",
         type=Path,
@@ -49,7 +54,12 @@ def parse_args() -> argparse.Namespace:
         help="Val JSON filename located in annotations-dir",
     )
     p.add_argument("--test-json", type=str, default="", help="Optional test JSON filename in annotations-dir")
-    p.add_argument("--yaml-out", type=Path, default=None, help="Output dataset yaml path (default: <dataset-root>/dataset_seg.yaml)")
+    p.add_argument(
+        "--yaml-out",
+        type=Path,
+        default=None,
+        help="Output dataset yaml path (default: <dataset-root>/dataset_seg.yaml)",
+    )
     p.add_argument(
         "--convert-save-dir",
         type=Path,
