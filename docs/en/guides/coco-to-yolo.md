@@ -302,10 +302,63 @@ Use the `convert_coco()` function from Ultralytics to convert COCO JSON annotati
 ```python
 from ultralytics.data.converter import convert_coco
 
-convert_coco(labels_dir="path/to/annotations/", save_dir="output/", cls91to80=False)
+convert_coco(labels_dir="path/to/annotations/", save_dir="output/", cls91to80=False, copy_images=True, images_dir="path/to/images")
 ```
 
 After conversion, reorganize your label files so `labels/` mirrors the `images/` directory, then create a `dataset.yaml` file. See the [step-by-step guide](#step-by-step-conversion-guide) for the complete workflow.
+
+### I converted PAGE XML to COCO, but no images were copied. What is the full workflow to train YOLO26?
+
+`convert_coco()` converts **annotations** by default. Set `copy_images=True` to also copy image files into `save_dir/images`.
+
+Use this end-to-end workflow:
+
+1. Convert your PAGE XML files to a COCO JSON file with your PAGE-to-COCO tool.
+2. Convert COCO JSON to YOLO labels:
+
+```python
+from ultralytics.data.converter import convert_coco
+
+convert_coco(labels_dir="path/to/annotations/", save_dir="converted/", cls91to80=False)
+```
+
+3. Build YOLO directory layout manually so images and labels are parallel:
+
+```text
+my_dataset/
+├── images/
+│   ├── train/
+│   │   ├── img_001.jpg
+│   │   └── ...
+│   └── val/
+│       ├── img_101.jpg
+│       └── ...
+└── labels/
+    ├── train/
+    │   ├── img_001.txt
+    │   └── ...
+    └── val/
+        ├── img_101.txt
+        └── ...
+```
+
+4. Move/copy labels from `converted/labels/...` into `my_dataset/labels/...` to mirror image filenames.
+5. Create `my_dataset.yaml` and train YOLO26:
+
+```yaml
+path: /absolute/path/to/my_dataset
+train: images/train
+val: images/val
+names:
+  0: class_a
+  1: class_b
+```
+
+```bash
+yolo detect train model=yolo26n.pt data=my_dataset.yaml epochs=100 imgsz=640
+```
+
+If filenames in labels do not match image filenames exactly, training will report missing labels or missing images.
 
 ### Why does YOLO training show "No labels found" after COCO conversion?
 

@@ -234,16 +234,22 @@ def convert_coco(
     use_keypoints: bool = False,
     cls91to80: bool = True,
     lvis: bool = False,
+    copy_images: bool = False,
+    images_dir: str | None = None,
 ):
     """Convert COCO dataset annotations to a YOLO annotation format suitable for training YOLO models.
 
     Args:
         labels_dir (str, optional): Path to directory containing COCO dataset annotation files.
-        save_dir (str, optional): Path to directory to save results to.
+        save_dir (str, optional): Path to directory to save results to. This function creates an ``images/`` directory
+            but does not copy or move image files into it.
         use_segments (bool, optional): Whether to include segmentation masks in the output.
         use_keypoints (bool, optional): Whether to include keypoint annotations in the output.
         cls91to80 (bool, optional): Whether to map 91 COCO class IDs to the corresponding 80 COCO class IDs.
         lvis (bool, optional): Whether to convert data in lvis dataset way.
+        copy_images (bool, optional): Whether to copy images referenced by annotations to ``save_dir/images``.
+        images_dir (str | None, optional): Root directory containing source images. Required when
+            ``copy_images=True`` unless images are under ``Path(labels_dir).parent / 'images'``.
 
     Examples:
         >>> from ultralytics.data.converter import convert_coco
@@ -253,11 +259,23 @@ def convert_coco(
 
         Convert LVIS annotations to YOLO format
         >>> convert_coco("lvis/annotations/", use_segments=True, use_keypoints=False, cls91to80=False, lvis=True)
+
+        Convert COCO annotations and copy images into the YOLO dataset folder
+        >>> convert_coco("coco/annotations/", save_dir="coco_yolo/", cls91to80=False, copy_images=True, images_dir="coco/images")
     """
     # Create dataset directory
     save_dir = increment_path(save_dir)  # increment if save directory already exists
     for p in save_dir / "labels", save_dir / "images":
         p.mkdir(parents=True, exist_ok=True)  # make dir
+
+    source_images = Path(images_dir).resolve() if images_dir else Path(labels_dir).resolve().parent / "images"
+    if copy_images:
+        LOGGER.info(f"Converting annotations from {Path(labels_dir).resolve()} to {save_dir} and copying images from {source_images}.")
+    else:
+        LOGGER.info(
+            f"Converting annotations from {Path(labels_dir).resolve()} to {save_dir}. "
+            "Note: image files are not copied; only YOLO labels and image filename lists are generated."
+        )
 
     # Convert classes
     coco80 = coco91_to_coco80_class()
@@ -283,6 +301,7 @@ def convert_coco(
             annotations[ann["image_id"]].append(ann)
 
         image_txt = []
+        copied, missing = 0, 0
         # Write labels file
         for img_id, anns in TQDM(annotations.items(), desc=f"Annotations {json_file}"):
             img = images[f"{img_id:d}"]
@@ -339,10 +358,23 @@ def convert_coco(
                         )  # cls, box or segments
                     file.write(("%g " * len(line)).rstrip() % line + "\n")
 
+            if copy_images:
+                src_img = source_images / f
+                dst_img = save_dir / "images" / f
+                dst_img.parent.mkdir(parents=True, exist_ok=True)
+                if src_img.is_file():
+                    shutil.copy2(src_img, dst_img)
+                    copied += 1
+                else:
+                    missing += 1
+
         if lvis:
             filename = Path(save_dir) / json_file.name.replace("lvis_v1_", "").replace(".json", ".txt")
             with open(filename, "a", encoding="utf-8") as f:
                 f.writelines(f"{line}\n" for line in image_txt)
+
+        if copy_images:
+            LOGGER.info(f"{json_file.name}: copied {copied} images to {save_dir / 'images'} ({missing} missing in source).")
 
     LOGGER.info(f"{'LVIS' if lvis else 'COCO'} data converted successfully.\nResults saved to {save_dir.resolve()}")
 
