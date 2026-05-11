@@ -133,6 +133,7 @@ def main() -> None:
         (out / "labels" / split).mkdir(parents=True, exist_ok=True)
 
     split_counts = defaultdict(int)
+    missing_images = 0
     for r in records:
         split = "val" if id(r) in val_set else "train"
         stem = r["image"].stem
@@ -143,11 +144,15 @@ def main() -> None:
         if args.copy_images:
             if r["image"].exists():
                 shutil.copy2(r["image"], image_out)
+            else:
+                missing_images += 1
         else:
             if image_out.exists() or image_out.is_symlink():
                 image_out.unlink()
             if r["image"].exists():
                 image_out.symlink_to(r["image"].resolve())
+            else:
+                missing_images += 1
 
         split_counts[split] += 1
 
@@ -169,7 +174,10 @@ def main() -> None:
 
     print(f"Created YOLO dataset at: {out}")
     print(f"Train images: {split_counts['train']}, Val images: {split_counts['val']}")
+    print(f"Image mode: {'copy' if args.copy_images else 'symlink'}")
     print(f"Classes: {len(names)}")
+    if missing_images:
+        print(f"Missing source images: {missing_images}")
     if malformed_xml_paths:
         print(f"Skipped {len(malformed_xml_paths)} malformed PAGE-XML files")
 
