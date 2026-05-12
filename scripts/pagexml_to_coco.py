@@ -12,6 +12,7 @@ from pathlib import Path
 import yaml
 from PIL import Image
 
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input_root", type=Path, help="Root directory to scan")
@@ -33,8 +34,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--copy-images", action="store_true", help="Copy images into output_root/images/{train,val}")
     return parser.parse_args()
 
+
 def should_exclude(path: Path, prefixes: list[str]) -> bool:
     return any(part.startswith(prefix) for prefix in prefixes if prefix for part in path.parts)
+
 
 def iter_pagexml_files(root: Path, page_folder_name: str, exclude_prefixes: list[str]):
     target = page_folder_name.lower()
@@ -45,12 +48,14 @@ def iter_pagexml_files(root: Path, page_folder_name: str, exclude_prefixes: list
             continue
         yield xml_file
 
+
 def parse_points(points_raw: str):
     pts = []
     for pair in points_raw.split():
         x_str, y_str = pair.split(",")
         pts.append((float(x_str), float(y_str)))
     return pts
+
 
 def polygon_area(points):
     area2 = 0.0
@@ -60,15 +65,16 @@ def polygon_area(points):
         area2 += x1 * y2 - x2 * y1
     return abs(area2) * 0.5
 
+
 def local_name(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
+
 
 def resolve_image_path(xml_path: Path, image_filename: str, search_root: Path | None = None) -> Path:
     """Resolve image path referenced by PAGE-XML.
 
-    PAGE-XML files are often stored under a `page/` directory while images live one
-    level above it, so check both locations before falling back to a repository-wide
-    filename search.
+    PAGE-XML files are often stored under a `page/` directory while images live one level above it, so check both
+    locations before falling back to a repository-wide filename search.
     """
     candidate = Path(image_filename)
     if candidate.is_absolute():
@@ -96,6 +102,7 @@ def copy_image_as_rgb(src: Path, dst: Path) -> None:
     """Copy an image to destination while ensuring a 3-channel RGB output."""
     with Image.open(src) as im:
         im.convert("RGB").save(dst)
+
 
 def main() -> None:
     args = parse_args()
@@ -207,6 +214,7 @@ def main() -> None:
         print(f"Missing source images: {missing_images}")
     if malformed_xml_paths:
         print(f"Skipped {len(malformed_xml_paths)} malformed PAGE-XML files")
+
 
 if __name__ == "__main__":
     main()
