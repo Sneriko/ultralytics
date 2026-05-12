@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import argparse
 import random
-import shutil
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
 
 import yaml
+from PIL import Image
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -91,6 +91,12 @@ def resolve_image_path(xml_path: Path, image_filename: str, search_root: Path | 
 
     return local
 
+
+def copy_image_as_rgb(src: Path, dst: Path) -> None:
+    """Copy an image to destination while ensuring a 3-channel RGB output."""
+    with Image.open(src) as im:
+        im.convert("RGB").save(dst)
+
 def main() -> None:
     args = parse_args()
     rng = random.Random(args.seed)
@@ -164,7 +170,7 @@ def main() -> None:
         image_out = out / "images" / split / r["image"].name
         if args.copy_images:
             if r["image"].exists():
-                shutil.copy2(r["image"], image_out)
+                copy_image_as_rgb(r["image"], image_out)
             else:
                 missing_images += 1
         else:
