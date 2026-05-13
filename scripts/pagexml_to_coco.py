@@ -63,6 +63,15 @@ def polygon_area(points):
 def local_name(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
 
+
+def normalized_class_name(tag_name: str) -> str | None:
+    """Map PAGE-XML element names to output dataset classes."""
+    if tag_name == "ImageRegion":
+        return None
+    if tag_name == "TableRegion":
+        return "TextRegion"
+    return tag_name
+
 def resolve_image_path(xml_path: Path, image_filename: str, search_root: Path | None = None) -> Path:
     """Resolve image path referenced by PAGE-XML.
 
@@ -126,6 +135,10 @@ def main() -> None:
             tag_name = local_name(elem.tag)
             if not (tag_name.endswith("Region") or tag_name == "TextLine"):
                 continue
+            class_name = normalized_class_name(tag_name)
+            if class_name is None:
+                continue
+
             coords = next((c for c in elem if local_name(c.tag) == "Coords"), None)
             if coords is None:
                 continue
@@ -138,9 +151,9 @@ def main() -> None:
             if polygon_area(points) <= 0:
                 continue
 
-            if tag_name not in categories:
-                categories[tag_name] = len(categories)
-            cls = categories[tag_name]
+            if class_name not in categories:
+                categories[class_name] = len(categories)
+            cls = categories[class_name]
 
             norm = []
             for x, y in points:
