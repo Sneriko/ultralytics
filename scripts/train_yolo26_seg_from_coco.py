@@ -41,6 +41,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--mosaic", type=float, default=1.0)
     p.add_argument("--mixup", type=float, default=0.0)
     p.add_argument("--copy-paste", type=float, default=0.0)
+    p.add_argument(
+        "--classes",
+        type=int,
+        nargs="+",
+        default=None,
+        help="Optional class id filter(s) to train on, e.g. --classes 1 for textline-only.",
+    )
 
     p.add_argument("--project", type=str, default="runs/segment")
     p.add_argument("--name", type=str, default="train")
@@ -110,6 +117,7 @@ def main() -> None:
         mosaic=args.mosaic,
         mixup=args.mixup,
         copy_paste=args.copy_paste,
+        classes=args.classes,
         project=args.project,
         name=args.name,
         exist_ok=args.exist_ok,
