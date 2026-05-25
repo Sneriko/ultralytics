@@ -248,8 +248,8 @@ def convert_coco(
         cls91to80 (bool, optional): Whether to map 91 COCO class IDs to the corresponding 80 COCO class IDs.
         lvis (bool, optional): Whether to convert data in lvis dataset way.
         copy_images (bool, optional): Whether to copy images referenced by annotations to ``save_dir/images``.
-        images_dir (str | None, optional): Root directory containing source images. Required when
-            ``copy_images=True`` unless images are under ``Path(labels_dir).parent / 'images'``.
+        images_dir (str | None, optional): Root directory containing source images. Required when ``copy_images=True``
+            unless images are under ``Path(labels_dir).parent / 'images'``.
 
     Examples:
         >>> from ultralytics.data.converter import convert_coco
@@ -261,7 +261,9 @@ def convert_coco(
         >>> convert_coco("lvis/annotations/", use_segments=True, use_keypoints=False, cls91to80=False, lvis=True)
 
         Convert COCO annotations and copy images into the YOLO dataset folder
-        >>> convert_coco("coco/annotations/", save_dir="coco_yolo/", cls91to80=False, copy_images=True, images_dir="coco/images")
+        >>> convert_coco(
+        ...     "coco/annotations/", save_dir="coco_yolo/", cls91to80=False, copy_images=True, images_dir="coco/images"
+        ... )
     """
     # Create dataset directory
     save_dir = increment_path(save_dir)  # increment if save directory already exists
@@ -270,7 +272,9 @@ def convert_coco(
 
     source_images = Path(images_dir).resolve() if images_dir else Path(labels_dir).resolve().parent / "images"
     if copy_images:
-        LOGGER.info(f"Converting annotations from {Path(labels_dir).resolve()} to {save_dir} and copying images from {source_images}.")
+        LOGGER.info(
+            f"Converting annotations from {Path(labels_dir).resolve()} to {save_dir} and copying images from {source_images}."
+        )
     else:
         LOGGER.info(
             f"Converting annotations from {Path(labels_dir).resolve()} to {save_dir}. "
@@ -374,7 +378,9 @@ def convert_coco(
                 f.writelines(f"{line}\n" for line in image_txt)
 
         if copy_images:
-            LOGGER.info(f"{json_file.name}: copied {copied} images to {save_dir / 'images'} ({missing} missing in source).")
+            LOGGER.info(
+                f"{json_file.name}: copied {copied} images to {save_dir / 'images'} ({missing} missing in source)."
+            )
 
     LOGGER.info(f"{'LVIS' if lvis else 'COCO'} data converted successfully.\nResults saved to {save_dir.resolve()}")
 
