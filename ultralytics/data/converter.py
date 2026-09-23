@@ -248,8 +248,8 @@ def convert_coco(
         cls91to80 (bool, optional): Whether to map 91 COCO class IDs to the corresponding 80 COCO class IDs.
         lvis (bool, optional): Whether to convert data in lvis dataset way.
         copy_images (bool, optional): Whether to copy images referenced by annotations to ``save_dir/images``.
-        images_dir (str | None, optional): Root directory containing source images. Required when
-            ``copy_images=True`` unless images are under ``Path(labels_dir).parent / 'images'``.
+        images_dir (str | None, optional): Root directory containing source images. Required when ``copy_images=True``
+            unless images are under ``Path(labels_dir).parent / 'images'``.
 
     Examples:
         >>> from ultralytics.data.converter import convert_coco
@@ -261,7 +261,9 @@ def convert_coco(
         >>> convert_coco("lvis/annotations/", use_segments=True, use_keypoints=False, cls91to80=False, lvis=True)
 
         Convert COCO annotations and copy images into the YOLO dataset folder
-        >>> convert_coco("coco/annotations/", save_dir="coco_yolo/", cls91to80=False, copy_images=True, images_dir="coco/images")
+        >>> convert_coco(
+        ...     "coco/annotations/", save_dir="coco_yolo/", cls91to80=False, copy_images=True, images_dir="coco/images"
+        ... )
     """
     # Create dataset directory
     save_dir = increment_path(save_dir)  # increment if save directory already exists
@@ -270,7 +272,9 @@ def convert_coco(
 
     source_images = Path(images_dir).resolve() if images_dir else Path(labels_dir).resolve().parent / "images"
     if copy_images:
-        LOGGER.info(f"Converting annotations from {Path(labels_dir).resolve()} to {save_dir} and copying images from {source_images}.")
+        LOGGER.info(
+            f"Converting annotations from {Path(labels_dir).resolve()} to {save_dir} and copying images from {source_images}."
+        )
     else:
         LOGGER.info(
             f"Converting annotations from {Path(labels_dir).resolve()} to {save_dir}. "
@@ -374,7 +378,9 @@ def convert_coco(
                 f.writelines(f"{line}\n" for line in image_txt)
 
         if copy_images:
-            LOGGER.info(f"{json_file.name}: copied {copied} images to {save_dir / 'images'} ({missing} missing in source).")
+            LOGGER.info(
+                f"{json_file.name}: copied {copied} images to {save_dir / 'images'} ({missing} missing in source)."
+            )
 
     LOGGER.info(f"{'LVIS' if lvis else 'COCO'} data converted successfully.\nResults saved to {save_dir.resolve()}")
 
@@ -529,7 +535,7 @@ def convert_dota_to_yolo_obb(dota_root_path: str):
                 formatted_coords = [f"{coord:.6g}" for coord in normalized_coords]
                 g.write(f"{class_idx} {' '.join(formatted_coords)}\n")
 
-    for phase in {"train", "val"}:
+    for phase in ("train", "val"):
         image_dir = dota_root_path / "images" / phase
         orig_label_dir = dota_root_path / "labels" / f"{phase}_original"
         save_dir = dota_root_path / "labels" / phase
@@ -641,7 +647,7 @@ def yolo_bbox2segment(im_dir: str | Path, save_dir: str | Path | None = None, sa
     from ultralytics.utils.ops import xywh2xyxy
 
     # NOTE: add placeholder to pass class index check
-    dataset = YOLODataset(im_dir, data=dict(names=list(range(1000)), channels=3))
+    dataset = YOLODataset(im_dir, data={"names": list(range(1000)), "channels": 3})
     if len(dataset.labels[0]["segments"]) > 0:  # if it's segment data
         LOGGER.info("Segmentation labels detected, no need to generate new ones!")
         return
@@ -711,7 +717,7 @@ def create_synthetic_coco_dataset():
     # Create synthetic images
     shutil.rmtree(dir / "labels" / "test2017", ignore_errors=True)  # Remove test2017 directory as not needed
     with ThreadPoolExecutor(max_workers=NUM_THREADS) as executor:
-        for subset in {"train2017", "val2017"}:
+        for subset in ("train2017", "val2017"):
             subset_dir = dir / "images" / subset
             subset_dir.mkdir(parents=True, exist_ok=True)
 
