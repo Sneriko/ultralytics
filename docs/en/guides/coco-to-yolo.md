@@ -302,7 +302,13 @@ Use the `convert_coco()` function from Ultralytics to convert COCO JSON annotati
 ```python
 from ultralytics.data.converter import convert_coco
 
-convert_coco(labels_dir="path/to/annotations/", save_dir="output/", cls91to80=False, copy_images=True, images_dir="path/to/images")
+convert_coco(
+    labels_dir="path/to/annotations/",
+    save_dir="output/",
+    cls91to80=False,
+    copy_images=True,
+    images_dir="path/to/images",
+)
 ```
 
 After conversion, reorganize your label files so `labels/` mirrors the `images/` directory, then create a `dataset.yaml` file. See the [step-by-step guide](#step-by-step-conversion-guide) for the complete workflow.
@@ -350,8 +356,8 @@ path: /absolute/path/to/my_dataset
 train: images/train
 val: images/val
 names:
-  0: class_a
-  1: class_b
+    0: class_a
+    1: class_b
 ```
 
 ```bash
